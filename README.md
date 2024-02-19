@@ -1,7 +1,21 @@
-<div style="text-align: center;">
-    <img src="assets/logo.webp" alt="Logo" height="150">
+<div align="center">
+  <a href="https://github.com/Delpha-Assistant/delpha_proxy">
+    <img src="assets/logo.webp" alt="Logo" width="130">
+  </a>
+
+  <h3 align="center">Delpha Proxy</h3>
+
+  <p align="center">
+    <i>Let's play with proxies</i>
+    <br />
+    <a href="https://github.com/Delpha-Assistant/delpha_proxy"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/Delpha-Assistant/delpha_proxy/issues">Report Bug</a>
+    •
+    <a href="https://github.com/Delpha-Assistant/delpha_proxy/issues">Request Feature</a>
+  </p>
 </div>
-<br><br>
 
 # Delpha Proxy
 
