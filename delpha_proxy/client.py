@@ -1,6 +1,6 @@
 import sys
 
-from clients.linux import LinuxProxyClient
+from delpha_proxy.clients.linux import LinuxProxyClient
 
 
 class ProxyClient:

@@ -1,3 +1,8 @@
+<div style="text-align: center;">
+    <img src="assets/logo.webp" alt="Logo" height="150">
+</div>
+<br><br>
+
 # Delpha Proxy
 
 Delpha Proxy is a Python package that allows you to easily set up and manage both server and client proxies. It provides a convenient interface for configuring proxy servers with authentication support and handling client connections seamlessly.

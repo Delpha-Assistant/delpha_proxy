@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from clients.abstract import AbstractProxy
+from delpha_proxy.clients.abstract import AbstractProxy
 
 
 class LinuxProxyClient(AbstractProxy):
