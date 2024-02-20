@@ -34,12 +34,12 @@ pip install git+ssh://git@github.com/Delpha-Assistant/delpha_proxy
 To set up a proxy server, run the following command:
 
 ```bash
-setup-server
+setup
 ```
 
 For dev purpose:
 ```bash
-poetry run setup-server
+poetry run setup
 ```
 
 Follow the prompts to configure the server settings, including port number and authentication.

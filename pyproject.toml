@@ -15,5 +15,5 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-setup-server = "delpha_proxy.launcher:setup_server_proxy"
+setup = "delpha_proxy.launcher:setup_server_proxy"
 check = "delpha_proxy.checker:check"

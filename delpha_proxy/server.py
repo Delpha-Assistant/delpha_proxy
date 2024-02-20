@@ -24,9 +24,12 @@ class ProxyServer:
         self.public_host: str = self._get_public_ip()
         self.local_host: str = self._get_local_ip()
         self.port: Optional[int] = None
-        self.db_path: str = "users.db"
+        base_folder = os.path.expanduser("~")
+        os.makedirs(base_folder, exist_ok=True)
+        self.db_path: str = os.path.join(base_folder, "users.db")
+        self.log_path: str = os.path.join(base_folder, "server.log")
         logging.basicConfig(
-            filename="server.log", level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+            filename=self.log_path, level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
         )
 
     def start_server(self) -> None:
@@ -49,6 +52,13 @@ class ProxyServer:
         if not self._confirm_port_forwarding_setup():
             self.log(" 📕 Server startup aborted by the user.", "cli")
             return
+        self._configure_dyn_dns()
+
+    def _configure_dyn_dns(self) -> None:
+        """Setup the docmain name"""
+        hostname = input(" ▶️  DynDNS hostname (let blank if no setup): ")
+        if hostname != "":
+            self.public_host = hostname
 
     def _configure_auth(self) -> None:
         """Setup the proxy server"""
@@ -285,7 +295,7 @@ class ProxyServer:
         """Cleanup resources, close log tailing windows, and exit."""
         self.log(" 🟥 Server closed", "server")
         # Clear log file
-        open("server.log", "w").close()
+        open(self.log_path, "w").close()
         # Clear the database
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
@@ -305,7 +315,7 @@ class ProxyServer:
         """Open a new terminal window to tail the server.log file."""
         if platform.system() == "Linux":
             try:
-                subprocess.call(["gnome-terminal", "--", "tail", "-f", "server.log"])
+                subprocess.call(["gnome-terminal", "--", "tail", "-f", self.log_path])
             except Exception as e:
                 self.log(f"Failed to open log tailing terminal: {e}", "cli", "error")
         else:
