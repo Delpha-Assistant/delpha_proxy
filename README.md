@@ -49,7 +49,7 @@ To set up a proxy client, run the following command:
 delpha-proxy setup-client
 ```
 
-The client will automatically detect the platform and configure the appropriate proxy settings.
+The client will automatically detect the platform and configure the appropriate proxy settings. The client is more for testing / debugging purpose, you will be able to check the status of the proxy and activate / deactivate. But of course you can directly use the proxy where ever you want by setup it in your browsers / machine etc without using the client.
 
 
 
