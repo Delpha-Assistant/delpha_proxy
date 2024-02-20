@@ -2,6 +2,7 @@ import base64
 import hashlib
 import logging
 import os
+import platform
 import select
 import socket
 import sqlite3
@@ -298,11 +299,13 @@ class ProxyServer:
 
     def _show_logs(self):
         """Open a new terminal window to tail the server.log file."""
-        try:
-            # For Linux (gnome-terminal)
-            subprocess.call(["gnome-terminal", "--", "tail", "-f", "server.log"])
-        except Exception as e:
-            self.log(f"Failed to open log tailing terminal: {e}", "cli", "error")
+        if platform.system() == "Linux":
+            try:
+                subprocess.call(["gnome-terminal", "--", "tail", "-f", "server.log"])
+            except Exception as e:
+                self.log(f"Failed to open log tailing terminal: {e}", "cli", "error")
+        else:
+            self.log("The 'show-logs' command is not available on the current platform.", "cli", "error")
 
     def _get_local_ip(self):
         try:

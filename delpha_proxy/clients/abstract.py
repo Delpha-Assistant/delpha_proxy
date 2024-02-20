@@ -16,13 +16,10 @@ class AbstractProxy(ABC):
     def start_client(self):
         """Start the client CLI."""
         self.log("\n 🖥️  Welcome to the ProxyClient CLI. Type 'help' to see the available commands.\n")
-        help_message = "\n 💡 Available commands:\n  - setup\n  - on\n  - test\n  - off\n  - status\n  - exit"
+        help_message = "\n 💡 Available commands:\n  - on\n  - off\n  - test\n  - status\n  - exit"
         while True:
             command = input("> ").strip().lower()
-            if command == "setup":
-                auth_info = self._get_authentication_info()
-                self.setup_proxy(**auth_info)
-            elif command == "on":
+            if command == "on":
                 self.turn_on_proxy()
             elif command == "test":
                 self.test_proxy()
@@ -54,18 +51,28 @@ class AbstractProxy(ABC):
                 continue
             port = int(port_input)
 
-            username = input(" ▶️ Enter username: ").strip()
-            password = input(" ▶️ Enter password: ").strip()
+            username, password = None, None
+            auth = input(" ▶️ Is authentication required? (yes/no): ").strip().lower()
+            if auth in ["y", "yes"]:
+                username = input(" ▶️ Enter username: ").strip()
+                if not username:
+                    self.log("Username cannot be empty. Please try again.", "error")
+                    continue
 
-            if not username:
-                self.log("Username cannot be empty. Please try again.", "error")
-                continue
-
+                password = input(" ▶️ Enter password: ").strip()
+                if not password:
+                    self.log("Password cannot be empty. Please try again.", "error")
+                    continue
             return {"host": host, "port": port, "username": username, "password": password}
 
     @abstractmethod
-    def setup_proxy(self, host: str, port: int, username: str, password: str) -> None:
+    def _setup_proxy(self, host: str, port: int, username: str, password: str) -> None:
         """Set up the proxy on the client system."""
+        pass
+
+    @abstractmethod
+    def get_status(self) -> None:
+        """Check if the proxy is running."""
         pass
 
     @abstractmethod

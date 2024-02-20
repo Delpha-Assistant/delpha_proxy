@@ -1,4 +1,3 @@
-import os
 import subprocess
 
 from delpha_proxy.clients.abstract import AbstractProxy
@@ -7,69 +6,82 @@ from delpha_proxy.clients.abstract import AbstractProxy
 class LinuxProxyClient(AbstractProxy):
     """Setup a client proxy specifically for Linux"""
 
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
-        self.status = "off"
+        self.proxy_auth = None
+        self.environment_file_path = "/etc/environment"
 
-    def setup_proxy(self, host, port, username, password) -> None:
+    def _setup_proxy(self, host: str, port: int, username: str = None, password: str = None) -> None:
         """Set up the proxy on the client system for Linux."""
-        try:
-            self.host = host
-            self.port = port
-            self.username = username
-            self.password = password
-            # Write proxy configuration to environment variables
-            os.environ["HTTP_PROXY"] = f"http://{self.username}:{self.password}@{self.host}:{self.port}"
-            os.environ["HTTPS_PROXY"] = f"http://{self.username}:{self.password}@{self.host}:{self.port}"
-            self.log(" ✅ Proxy configured successfully.")
-        except Exception as e:
-            self.log(f"Error setting up proxy: {e}", "error")
+        if username and password:
+            self.proxy_auth = f"http://{username}:{password}@{host}:{port}"
+        else:
+            self.proxy_auth = f"http://{host}:{port}"
 
     def turn_on_proxy(self) -> None:
-        """Turn on the proxy for Linux."""
+        """Turn on the proxy."""
+        if not self.proxy_auth:
+            self.log(" 💡 Proxy setup has not been done. Initiating setup...", "info")
+            auth_info = self._get_authentication_info()
+            self._setup_proxy(**auth_info)
+
+        lines_to_add = [
+            f'HTTP_PROXY="{self.proxy_auth}"',
+            f'HTTPS_PROXY="{self.proxy_auth}"',
+            'NO_PROXY="localhost,127.0.0.1,::1"',
+        ]
         try:
-            subprocess.run(["gsettings", "set", "org.gnome.system.proxy", "mode", "manual"])
-            subprocess.run(["gsettings", "set", "org.gnome.system.proxy.http", "host", self.host])
-            subprocess.run(["gsettings", "set", "org.gnome.system.proxy.http", "port", str(self.port)])
-            subprocess.run(["gsettings", "set", "org.gnome.system.proxy.http", "authentication-user", self.username])
-            subprocess.run(
-                ["gsettings", "set", "org.gnome.system.proxy.http", "authentication-password", self.password]
+            with open(self.environment_file_path, "r") as file:
+                existing_lines = file.readlines()
+
+            with open(self.environment_file_path, "a") as file:
+                for line in lines_to_add:
+                    if line.strip() not in existing_lines:
+                        file.write(line + "\n")
+            self.log(
+                " ✅ Proxy settings have been written to /etc/environment. Please log out and log back in for changes to take effect."
             )
-            subprocess.run(["gsettings", "set", "org.gnome.system.proxy.https", "host", self.host])
-            subprocess.run(["gsettings", "set", "org.gnome.system.proxy.https", "port", str(self.port)])
-            subprocess.run(["gsettings", "set", "org.gnome.system.proxy.https", "authentication-user", self.username])
-            subprocess.run(
-                ["gsettings", "set", "org.gnome.system.proxy.https", "authentication-password", self.password]
-            )
-            self.log(" ✅ Proxy turned on successfully.")
         except Exception as e:
-            self.log(f"Error turning on proxy: {e}", "error")
+            self.log(f"Failed to write proxy settings: {e}", "error")
 
     def turn_off_proxy(self) -> None:
-        """Turn off the proxy for Linux."""
+        """Turn off the proxy."""
         try:
-            subprocess.run(["gsettings", "set", "org.gnome.system.proxy", "mode", "none"])
-            self.log(" ✅ Proxy turned off successfully.")
+            with open(self.environment_file_path, "r") as file:
+                lines = file.readlines()
+
+            with open(self.environment_file_path, "w") as file:
+                for line in lines:
+                    if (
+                        line.startswith("HTTP_PROXY=")
+                        or line.startswith("NO_PROXY=")
+                        or line.startswith("HTTPS_PROXY=")
+                    ):
+                        # Skip writing this line, effectively deleting it
+                        continue
+                    file.write(line)
+            self.log(
+                " ✅ Proxy settings have been disabled. Please log out and log back in for changes to take effect."
+            )
         except Exception as e:
-            self.log(f"Error turning off proxy: {e}", "error")
+            self.log(f"Failed to disable proxy settings: {e}", "error")
 
     def test_proxy(self) -> None:
-        """Test if the proxy is working properly on Linux."""
+        """Test if the proxy is working properly."""
         try:
             result = subprocess.run(["curl", "ifconfig.me"], capture_output=True, text=True)
-            self.log(f" 💡 Current public IP: {result.stdout.strip()}")
+            self.log(f" 💡 Current public IP: {result.stdout.strip()}", "info")
         except Exception as e:
             self.log(f"Error testing proxy: {e}", "error")
 
-    def get_status(self) -> str:
+    def get_status(self) -> None:
         """Check if the proxy is running."""
+        # Directly checking the /etc/environment file for proxy settings
         try:
-            result = subprocess.run(
-                ["gsettings", "get", "org.gnome.system.proxy", "mode"], capture_output=True, text=True
-            )
-            mode = result.stdout.strip()
-            mode = "on" if mode == "manual" else "off"
-            self.log(f" 💡 Proxy status: {mode}")
-            return
+            with open(self.environment_file_path, "r") as file:
+                if any(line.startswith("HTTP_PROXY") for line in file):
+                    self.log(" 💡 Proxy is currently ON.", "info")
+                else:
+                    self.log(" 💡 Proxy is currently OFF.", "info")
         except Exception as e:
             self.log(f"Error checking proxy status: {e}", "error")
