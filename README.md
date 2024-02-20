@@ -8,9 +8,6 @@
   <p align="center">
     <i>Let's play with proxies</i>
     <br />
-    <a href="https://github.com/Delpha-Assistant/delpha_proxy"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
     <a href="https://github.com/Delpha-Assistant/delpha_proxy/issues">Report Bug</a>
     •
     <a href="https://github.com/Delpha-Assistant/delpha_proxy/issues">Request Feature</a>

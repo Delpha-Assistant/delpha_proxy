@@ -11,6 +11,7 @@ import sys
 import threading
 import time
 import traceback
+from socket import _RetAddress
 from typing import Optional, Tuple
 
 import requests
@@ -24,10 +25,12 @@ class ProxyServer:
         self.public_host: str = self._get_public_ip()
         self.local_host: str = self._get_local_ip()
         self.port: Optional[int] = None
+
         base_folder = os.path.expanduser("~")
         os.makedirs(base_folder, exist_ok=True)
         self.db_path: str = os.path.join(base_folder, "users.db")
         self.log_path: str = os.path.join(base_folder, "server.log")
+
         logging.basicConfig(
             filename=self.log_path, level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
         )
@@ -96,7 +99,7 @@ class ProxyServer:
                         "error",
                     )
 
-    def _confirm_port_forwarding_setup(self):
+    def _confirm_port_forwarding_setup(self) -> None:
         """Prompt the user to set up port forwarding and confirm when ready."""
         message = (
             "\n\n🌐 To make your server accessible from the internet, please configure port forwarding on your router. 🌐\n\n"
@@ -125,7 +128,10 @@ class ProxyServer:
                 )
 
     def _start_socket(self) -> Optional[socket.socket]:
-        """Start the server socket and listen for connections."""
+        """Start the server socket and listen for connections.
+
+        :return Optional[socket.socket]: The created socket
+        """
         while True:
             try:
                 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -140,22 +146,28 @@ class ProxyServer:
                 self._configure_port()
 
     def _handle_connections(self, server_socket: socket.socket) -> None:
-        """Handle incoming client connections."""
+        """Handle incoming client connections.
+
+        :param socket.socket server_socket: The socket client on which listen for incoming connections
+        """
         while True:
             client_socket, client_address = server_socket.accept()
             self.log(f" 💻 Connection attempt from {client_address}.", "server")
             threading.Thread(target=self._process_client_request, args=(client_socket, client_address)).start()
 
-    def _process_client_request(self, client_socket: socket.socket, client_address: Tuple[str, int]) -> None:
-        """Process an individual client request."""
+    def _process_client_request(self, client_socket: socket.socket, client_address: _RetAddress) -> None:
+        """Process an individual client request.
+
+        :param socket.socket client_socket: The socket from which is coming the request
+        :param _RetAddress client_address: The client ip address
+        """
         try:
             request_header = client_socket.recv(1024).decode(errors="ignore")
-            # Determine if this is an HTTPS CONNECT request
             if self._is_authenticated(request_header):
                 if request_header.startswith("CONNECT"):
-                    self._handle_https(request_header, client_socket, client_address)
+                    self._handle_https(request_header, client_socket)
                 else:
-                    self._handle_http(request_header, client_socket, client_address)
+                    self._handle_http(request_header, client_socket)
             else:
                 self._request_authentication(client_socket)
         except Exception as e:
@@ -166,7 +178,11 @@ class ProxyServer:
             client_socket.close()
 
     def _is_authenticated(self, request_header: str) -> bool:
-        """Check if the request contains valid authentication."""
+        """Check if the request contains valid authentication.
+
+        :param str request_header: The header of the incoming request
+        :return bool: True if the requests is authenticated
+        """
         if not self.authentication:
             return True
         if "Proxy-Authorization" in request_header:
@@ -178,15 +194,22 @@ class ProxyServer:
                     return self._authenticate_user(username, password)
         return False
 
-    def _request_authentication(self, client_socket: socket.socket):
-        """Request client for authentication."""
+    def _request_authentication(self, client_socket: socket.socket) -> None:
+        """Request client for authentication.
+
+        :param socket.socket client_socket: The socker from which is coming the unauthorized request
+        """
         self.log(f" 🚩 Request not authenticated, rejected", "server")
         client_socket.sendall(
             b"HTTP/1.1 407 Proxy Authentication Required\r\n" b'Proxy-Authenticate: Basic realm="Proxy"\r\n\r\n'
         )
 
-    def _handle_http(self, request_header: str, client_socket: socket.socket, client_address: Tuple[str, int]):
-        """Handle HTTP requests."""
+    def _handle_http(self, request_header: str, client_socket: socket.socket) -> None:
+        """Handle HTTP requests.
+
+        :param str request_header: The header of the incoming http request
+        :param socket.socket client_socket: The socker from which is coming the request
+        """
         try:
             # Extract the URL from the request header to determine the target server
             first_line = request_header.split("\n")[0]
@@ -197,6 +220,7 @@ class ProxyServer:
             else:
                 temp = url[(http_pos + 3) :]  # get the rest of the url
             port_pos = temp.find(":")  # find the port pos (if any)
+
             # Default port
             port = 80
             if port_pos == -1:  # default port
@@ -205,6 +229,7 @@ class ProxyServer:
             else:  # specific port
                 server = temp[:port_pos]
                 port = int((temp[(port_pos + 1) :])[: temp[(port_pos + 1) :].find("/")])
+
             # Create a socket to connect to the web server
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect((server, port))
@@ -220,17 +245,20 @@ class ProxyServer:
         except socket.error as e:
             self.log(f"Error: {e}\n{traceback.format_exc()}", "server", "error")
 
-    def _handle_https(self, request_header: str, client_socket: socket.socket, client_address: Tuple[str, int]):
-        """Handle HTTPS CONNECT requests."""
+    def _handle_https(self, request_header: str, client_socket: socket.socket) -> None:
+        """Handle HTTPS CONNECT requests.
+
+        :param str request_header: The header of the incoming http request
+        :param socket.socket client_socket: The socket from which is coming the request
+        """
         try:
             target = request_header.split(" ")[1].split(":")[0]
             port = int(request_header.split(" ")[1].split(":")[1])
+
             # Establish a connection to the target
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_socket.connect((target, port))
-            # Send connection established response to the client
             client_socket.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n")
-            # Tunnel the data between client and server
             self._tunnel_data(client_socket, server_socket)
         except socket.gaierror as e:
             self.log(f"DNS resolution error: {e}", "server", "error")
@@ -239,8 +267,12 @@ class ProxyServer:
             self.log(f"HTTPS handling error: {e}\n{traceback.format_exc()}", "server", "error")
             client_socket.close()
 
-    def _tunnel_data(self, client_socket: socket.socket, server_socket: socket.socket):
-        """Tunnel data between client and server sockets."""
+    def _tunnel_data(self, client_socket: socket.socket, server_socket: socket.socket) -> None:
+        """Tunnel data between client and server sockets.
+
+        :param socket.socket client_socket: The socket from which is coming the request
+        :param socket.socket server_socket: The socket of the proxy server
+        """
         sockets_list = [client_socket, server_socket]
         keep_alive = True
         while keep_alive:
@@ -262,7 +294,12 @@ class ProxyServer:
                         keep_alive = False
 
     def _authenticate_user(self, username: str, password: str) -> bool:
-        """Authenticate a user by username and hashed password."""
+        """Authenticate a user by username and hashed password.
+
+        :param str username: The username of the user
+        :param str password: The password of the user
+        :return bool: True or False depending if the authencation suceeded
+        """
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT password FROM users WHERE username = ?", (username,))
@@ -277,7 +314,7 @@ class ProxyServer:
     def _run_command_interface(self) -> None:
         """Run the command-line interface for interacting with the server."""
         self.log(f"\n 🖥️  Welcome on the CLI, enter help to see the commands\n", "cli")
-        help = "\n 💡 Available commands:\n  - add-user\n  - show-logs\n - exit\n"
+        help = "\n 💡 Available commands:\n  - add-user\n  - show-logs\n  - exit\n"
         while True:
             command = input("> ").strip().lower()
             if command == "add-user":
@@ -291,12 +328,10 @@ class ProxyServer:
             else:
                 self.log("Invalid command. Please try again.", "cli", "error")
 
-    def _cleanup_and_exit(self):
+    def _cleanup_and_exit(self) -> None:
         """Cleanup resources, close log tailing windows, and exit."""
         self.log(" 🟥 Server closed", "server")
-        # Clear log file
         open(self.log_path, "w").close()
-        # Clear the database
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
         self.log(" 🟥 Server startup cancelled.", "cli")
@@ -311,7 +346,7 @@ class ProxyServer:
         else:
             self.log(" 💡 User authentication is deactivated. No need to create any users.", "cli")
 
-    def _show_logs(self):
+    def _show_logs(self) -> None:
         """Open a new terminal window to tail the server.log file."""
         if platform.system() == "Linux":
             try:
@@ -321,7 +356,11 @@ class ProxyServer:
         else:
             self.log("The 'show-logs' command is not available on the current platform.", "cli", "error")
 
-    def _get_local_ip(self):
+    def _get_local_ip(self) -> str:
+        """Get the local ip of the current machine
+
+        :return str: The local ip of the machine
+        """
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
@@ -332,7 +371,10 @@ class ProxyServer:
             self.log(f"Error: {e}", "cli")
 
     def _get_public_ip(self) -> str:
-        """Fetch the current public IP address using an external service."""
+        """Fetch the current public IP address using an external service.
+
+        :return str: The public ip of the modem
+        """
         try:
             response = requests.get("https://ifconfig.me")
             return response.text
@@ -341,7 +383,12 @@ class ProxyServer:
             sys.exit(1)
 
     def log(self, msg: str, name: str, level: str = "info") -> None:
-        """Log a message with a given level."""
+        """Log a message with a given level.
+
+        :param str msg: The message to log
+        :param str name: The name of the log destination
+        :param str level: The log level, defaults to "info"
+        """
         if name == "cli":
             if level == "info":
                 print(msg)
@@ -358,13 +405,16 @@ class ProxyServer:
                 logging.warning(f" ⚠️  {msg}")
 
     def add_user(self, username: str, password: str) -> None:
-        """Add a new user with a username and hashed password to the database."""
+        """Add a new user with a username and hashed password to the database.
+
+        :param str username: The name of the user
+        :param str password: The password of the user
+        """
         try:
-            salt = os.urandom(16)  # Generate a unique salt for this user
+            salt = os.urandom(16)
             password_hash, _ = self._hash_password(password, salt)
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                # Store the salt and the hash together
                 cursor.execute(
                     "INSERT INTO users (username, password) VALUES (?, ?)", (username, password_hash + salt.hex())
                 )
@@ -374,14 +424,22 @@ class ProxyServer:
             self.log(" 💡 User already exists.\n", "cli", "warning")
 
     def _hash_password(self, password: str, salt: Optional[bytes] = None) -> Tuple[str, bytes]:
-        """Hash a password with a given salt, or generate one if not provided."""
+        """Hash a password with a given salt, or generate one if not provided.
+
+        :param str password: The password to hash
+        :param Optional[bytes] salt: The salt to use for randomization, defaults generate a new one
+        :return Tuple[str, bytes]: _description_
+        """
         if salt is None:
-            salt = os.urandom(16)  # Generate a new salt
+            salt = os.urandom(16)
         pwdhash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100000)
         return pwdhash.hex(), salt
 
     def __str__(self) -> str:
-        """Return a summary of the configured settings of the proxy server."""
+        """Return a summary of the configured settings of the proxy server.
+
+        :return str: Summary of the current server
+        """
         auth_status = "Activated" if self.authentication else "Deactivated"
         port = self.port if self.port else "Default (8080)"
         summary = (

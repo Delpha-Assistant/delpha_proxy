@@ -9,12 +9,16 @@ class ProxyChecker:
 
     def test_proxy(self) -> None:
         """Test the proxy configuration."""
-        print(" 💡 Current public IP (before setting up proxy):", self._get_current_public_ip())
+        print(" 💡 Current public IP (before setting up proxy): ", self._get_current_public_ip())
         config = self._get_proxy_config()
-        print("Current public IP (after setting up proxy):", self._get_current_public_ip(config))
+        print(" 💡 Current public IP (after setting up proxy): ", self._get_current_public_ip(config))
 
     def _get_current_public_ip(self, proxy: typing.Optional[dict] = None) -> Optional[str]:
-        """Fetch the current public IP address."""
+        """Fetch the current public IP address
+
+        :param typing.Optional[dict] proxy: The proxy config to use, defaults to None
+        :return Optional[str]: The current public ip, None if fails
+        """
         try:
             params = {"url": "https://ifconfig.me"}
             if proxy:
@@ -26,7 +30,10 @@ class ProxyChecker:
             return None
 
     def _get_proxy_config(self) -> dict:
-        """Set up proxy configuration for requests."""
+        """Set up proxy configuration for requests.
+
+        :return dict: The proxy settings
+        """
 
         proxy_host = input(" ▶️ Enter proxy host: ")
         proxy_port = int(input(" ▶️ Enter proxy port: "))
@@ -48,5 +55,6 @@ class ProxyChecker:
 
 
 def check():
+    """Launch the check"""
     proxy_tester = ProxyChecker()
     proxy_tester.test_proxy()
