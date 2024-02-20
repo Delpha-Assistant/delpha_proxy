@@ -170,6 +170,7 @@ class ProxyServer:
 
     def _request_authentication(self, client_socket: socket.socket):
         """Request client for authentication."""
+        self.log(f" 🚩 Request not authenticated, rejected", "server")
         client_socket.sendall(
             b"HTTP/1.1 407 Proxy Authentication Required\r\n" b'Proxy-Authenticate: Basic realm="Proxy"\r\n\r\n'
         )
@@ -221,6 +222,9 @@ class ProxyServer:
             client_socket.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n")
             # Tunnel the data between client and server
             self._tunnel_data(client_socket, server_socket)
+        except socket.gaierror as e:
+            self.log(f"DNS resolution error: {e}", "server", "error")
+            client_socket.close()
         except Exception as e:
             self.log(f"HTTPS handling error: {e}\n{traceback.format_exc()}", "server", "error")
             client_socket.close()

@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "delpha-proxy"
 version = "0.1.0"
-description = "A python package to create server and client proxy easly"
+description = "A python package to create server proxy easly"
 authors = ["Victor Goubet <victor.goubet@delpha.io>"]
 readme = "README.md"
 
@@ -16,4 +16,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 setup-server = "delpha_proxy.launcher:setup_server_proxy"
-setup-client = "delpha_proxy.launcher:setup_client_proxy"
+check = "delpha_proxy.checker:check"

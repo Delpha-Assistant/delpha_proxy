@@ -19,43 +19,42 @@
 
 # Delpha Proxy
 
-Delpha Proxy is a Python package that allows you to easily set up and manage both server and client proxies. It provides a convenient interface for configuring proxy servers with authentication support and handling client connections seamlessly.
+Delpha Proxy is a Python package that allows you to easily set up and manage a proxy server on any machine you want. It provides a convenient interface for configuring proxy servers with authentication support.
 
 ## Installation
 
-You can install Delpha Proxy using pip:
+You can install Delpha Proxy using pip (you will need an ssh authentication here):
 
 ```bash
-pip install delpha-proxy
+pip install git+ssh://git@github.com/Delpha-Assistant/delpha_proxy
 ```
 
 ## Usage
 
-### Setting up a Proxy Server
-
 To set up a proxy server, run the following command:
 
 ```bash
-sudo delpha-proxy setup-server
-```
-
-Follow the prompts to configure the server settings, including port number and authentication.
-
-### Setting up a Proxy Client
-
-To set up a proxy client, run the following command:
-
-```bash
-sudo delpha-proxy setup-client
+setup-server
 ```
 
 For dev purpose:
 ```bash
-sudo $(poetry run which setup-client)
+poetry run setup-server
 ```
 
-The client will automatically detect the platform and configure the appropriate proxy settings. The client is more for testing / debugging purpose, you will be able to check the status of the proxy and activate / deactivate. But of course you can directly use the proxy where ever you want by setup it in your browsers / machine etc without using the client.
+Follow the prompts to configure the server settings, including port number and authentication.
 
+
+You can also execute a check to test the proxy
+
+```bash
+check
+```
+
+For dev purpose:
+```bash
+poetry run check
+```
 
 
 © 2024 Delpha Technologies
