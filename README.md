@@ -54,4 +54,13 @@ poetry run check
 ```
 
 
-© 2024 Delpha Technologies
+## Troubles
+
+If the *setup* or *check* commands are not found, check if your python lib path is part of your PATH. 
+You can execute the following command inorder to see where is installed the package
+
+```bash
+pip show delpha_proxy
+```
+
+Then you should check the location and be sure that the bin folder is part of your PATH

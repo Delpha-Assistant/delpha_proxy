@@ -11,10 +11,11 @@ import sys
 import threading
 import time
 import traceback
-from socket import _RetAddress
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple, TypeAlias
 
 import requests
+
+_RetAddress: TypeAlias = Any
 
 
 class ProxyServer:
